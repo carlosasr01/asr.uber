@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Origens</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Gerenciar Origens</h1>
+        <a href="index.html" class="btn">Voltar</a>
+        <form id="origem-form">
+            <label for="nome">Nome da Origem:</label>
+            <input type="text" id="nome" required>
+            <button type="submit">Adicionar</button>
+        </form>
+        <h3>Origens Existentes</h3>
+        <ul id="origens-list"></ul>
+        <p id="feedback"></p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="scripts/supabase.js"></script>
+    <script src="scripts/origens.js"></script>
+</body>
+</html>

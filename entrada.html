@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inserir Entrada</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Inserir Entrada</h1>
+        <a href="index.html" class="btn">Voltar</a>
+        <form id="entrada-form">
+            <label for="data">Data:</label>
+            <input type="date" id="data" required>
+            
+            <label for="origem">Origem:</label>
+            <select id="origem" required>
+                <option value="">Selecione uma origem</option>
+            </select>
+            
+            <label for="valor_faturado">Valor Faturado (R$):</label>
+            <input type="number" id="valor_faturado" step="0.01" min="0" required>
+            
+            <label for="qtd_viagens">Quantidade de Viagens:</label>
+            <input type="number" id="qtd_viagens" min="0" step="1" required>
+            
+            <label for="qtd_quilometros">Quilômetros Rodados:</label>
+            <input type="number" id="qtd_quilometros" step="0.01" min="0" required>
+            
+            <label for="qtd_horas">Horas Trabalhadas (HH:MM):</label>
+            <input type="time" id="qtd_horas" required>
+            
+            <button type="submit">Salvar</button>
+        </form>
+        <p id="feedback"></p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="scripts/supabase.js"></script>
+    <script src="scripts/entrada.js"></script>
+</body>
+</html>

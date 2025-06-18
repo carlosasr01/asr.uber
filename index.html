@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Trabalho - Principal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Controle de Trabalho</h1>
+        <div id="auth-status">
+            <form id="login-form" style="display: none;">
+                <h3>Login</h3>
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Senha" required>
+                <button type="submit">Entrar</button>
+            </form>
+            <div id="user-info" style="display: none;">
+                <p>Bem-vindo, <span id="user-email"></span>!</p>
+                <button id="logout">Sair</button>
+            </div>
+        </div>
+        <div id="menu" style="display: none;">
+            <h3>Menu de Teste</h3>
+            <a href="entrada.html" class="btn">Inserir Entrada</a>
+            <a href="origens.html" class="btn">Gerenciar Origens</a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="scripts/supabase.js"></script>
+    <script>
+        // Lógica de autenticação
+        const loginForm = document.getElementById('login-form');
+        const userInfo = document.getElementById('user-info');
+        const userEmail = document.getElementById('user-email');
+        const logoutBtn = document.getElementById('logout');
+        const menu = document.getElementById('menu');
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                loginForm.style.display = 'none';
+                userInfo.style.display = 'block';
+                menu.style.display = 'block';
+                userEmail.textContent = session.user.email;
+            } else {
+                loginForm.style.display = 'block';
+                userInfo.style.display = 'none';
+                menu.style.display = 'none';
+            }
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) alert('Erro no login: ' + error.message);
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+        });
+    </script>
+</body>
+</html>
