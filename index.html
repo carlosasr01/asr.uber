@@ -29,10 +29,17 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
+        // Verificar se a biblioteca Supabase carregou
+        if (typeof supabase === 'undefined') {
+            console.error('Supabase CDN não carregou corretamente.');
+        } else {
+            console.log('Supabase CDN carregado com sucesso.');
+        }
+
         // Inicialização do Supabase
         const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
-        const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         // Lógica de autenticação
         const loginForm = document.getElementById('login-form');
@@ -42,6 +49,7 @@
         const menu = document.getElementById('menu');
 
         supabase.auth.onAuthStateChange((event, session) => {
+            console.log('Evento de autenticação:', event, session);
             if (session) {
                 loginForm.style.display = 'none';
                 userInfo.style.display = 'block';
@@ -58,16 +66,18 @@
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            console.log('Tentando login com:', email);
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
+                console.error('Erro no login:', error.message);
                 alert('Erro no login: ' + error.message);
             } else {
-                // Opcional: Redirecionar ou mostrar mensagem de sucesso
                 console.log('Login bem-sucedido!');
             }
         });
 
         logoutBtn.addEventListener('click', async () => {
+            console.log('Executando logout');
             await supabase.auth.signOut();
             console.log('Logout realizado');
         });
