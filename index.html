@@ -29,58 +29,70 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
-        // Verificar se a biblioteca Supabase carregou
-        if (typeof supabase === 'undefined') {
-            console.error('Supabase CDN não carregou corretamente.');
-        } else {
+        // Função para inicializar o Supabase e a lógica de autenticação
+        function initializeSupabase() {
+            // Verificar se a biblioteca Supabase carregou
+            if (typeof supabase === 'undefined') {
+                console.error('Erro: Supabase CDN não carregou corretamente.');
+                alert('Falha ao carregar a biblioteca Supabase. Tente novamente mais tarde.');
+                return;
+            }
             console.log('Supabase CDN carregado com sucesso.');
+
+            // Inicialização do Supabase
+            const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
+            const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+            // Lógica de autenticação
+            const loginForm = document.getElementById('login-form');
+            const userInfo = document.getElementById('user-info');
+            const userEmail = document.getElementById('user-email');
+            const logoutBtn = document.getElementById('logout');
+            const menu = document.getElementById('menu');
+
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                console.log('Evento de autenticação:', event, session);
+                if (session) {
+                    loginForm.style.display = 'none';
+                    userInfo.style.display = 'block';
+                    menu.style.display = 'block';
+                    userEmail.textContent = session.user.email;
+                } else {
+                    loginForm.style.display = 'block';
+                    userInfo.style.display = 'none';
+                    menu.style.display = 'none';
+                }
+            });
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                console.log('Tentando login com:', email);
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) {
+                    console.error('Erro no login:', error.message);
+                    alert('Erro no login: ' + error.message);
+                } else {
+                    console.log('Login bem-sucedido!');
+                }
+            });
+
+            logoutBtn.addEventListener('click', async () => {
+                console.log('Executando logout');
+                await supabaseClient.auth.signOut();
+                console.log('Logout realizado');
+            });
         }
 
-        // Inicialização do Supabase
-        const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        // Lógica de autenticação
-        const loginForm = document.getElementById('login-form');
-        const userInfo = document.getElementById('user-info');
-        const userEmail = document.getElementById('user-email');
-        const logoutBtn = document.getElementById('logout');
-        const menu = document.getElementById('menu');
-
-        supabase.auth.onAuthStateChange((event, session) => {
-            console.log('Evento de autenticação:', event, session);
-            if (session) {
-                loginForm.style.display = 'none';
-                userInfo.style.display = 'block';
-                menu.style.display = 'block';
-                userEmail.textContent = session.user.email;
-            } else {
-                loginForm.style.display = 'block';
-                userInfo.style.display = 'none';
-                menu.style.display = 'none';
-            }
-        });
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            console.log('Tentando login com:', email);
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                console.error('Erro no login:', error.message);
-                alert('Erro no login: ' + error.message);
-            } else {
-                console.log('Login bem-sucedido!');
-            }
-        });
-
-        logoutBtn.addEventListener('click', async () => {
-            console.log('Executando logout');
-            await supabase.auth.signOut();
-            console.log('Logout realizado');
-        });
+        // Executar a inicialização após o carregamento da CDN
+        const supabaseScript = document.querySelector('script[src*="supabase.min.js"]');
+        if (supabaseScript) {
+            supabaseScript.addEventListener('load', initializeSupabase);
+        } else {
+            console.error('Script do Supabase não encontrado.');
+        }
     </script>
 </body>
 </html>
