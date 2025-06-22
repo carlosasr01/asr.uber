@@ -21,13 +21,13 @@
             </select>
             
             <label for="valor_faturado">Valor Faturado (R$):</label>
-            <input type="number" id="valor_faturado" step="0.01" min="0" required>
+            <input type="number" id="valor_faturado" step="0.01" min="0" max="99999999.99" required>
             
             <label for="qtd_viagens">Quantidade de Viagens:</label>
             <input type="number" id="qtd_viagens" min="0" step="1" required>
             
             <label for="qtd_quilometros">Quilômetros Rodados:</label>
-            <input type="number" id="qtd_quilometros" step="0.01" min="0" required>
+            <input type="number" id="qtd_quilometros" step="0.01" min="0" max="99999999.99" required>
             
             <label for="qtd_horas">Horas Trabalhadas (HH:MM):</label>
             <input type="time" id="qtd_horas" required>
@@ -88,17 +88,23 @@
                 }
             }
 
+            // Função para converter HH:MM para interval
+            function timeToInterval(timeStr) {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                return `${hours} hours ${minutes} minutes`;
+            }
+
             // Função para salvar entrada
             entradaForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const entrada = {
                     data: document.getElementById('data').value,
-                    origem_id: document.getElementById('origem').value,
+                    origem_id: parseInt(document.getElementById('origem').value),
                     valor_faturado: parseFloat(document.getElementById('valor_faturado').value),
                     qtd_viagens: parseInt(document.getElementById('qtd_viagens').value),
                     qtd_quilometros: parseFloat(document.getElementById('qtd_quilometros').value),
-                    qtd_horas: document.getElementById('qtd_horas').value,
-                    user_id: session.user.id // Associar ao usuário autenticado
+                    qtd_horas: timeToInterval(document.getElementById('qtd_horas').value),
+                    user_id: session.user.id
                 };
                 const { data, error } = await supabaseClient
                     .from('entradas')
@@ -110,6 +116,8 @@
                     console.log('Entrada salva:', data);
                     feedback.textContent = 'Entrada salva com sucesso!';
                     entradaForm.reset(); // Limpar formulário
+                    origemSelect.innerHTML = '<option value="">Selecione uma origem</option>'; // Resetar select
+                    fetchOrigens(); // Recarregar origens
                 }
             });
 
