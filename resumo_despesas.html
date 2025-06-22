@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -115,9 +76,54 @@
                             <td data-label="Descrição">${despesa.descricao}</td>
                             <td data-label="Valor (R$)">${despesa.valor.toFixed(2)}</td>
                             <td data-label="Categoria">${despesa.categoria}</td>
-                            <td data-label="Ações">-</td>
+                            <td data-label="Ações">
+                                <button class="edit-btn" data-id="${despesa.id}"><i class="fas fa-edit"></i> Alterar</button>
+                                <button class="delete-btn" data-id="${despesa.id}"><i class="fas fa-trash"></i> Excluir</button>
+                            </td>
                         `;
                         tbody.appendChild(row);
+                    });
+                    // Adicionar eventos aos botões
+                    document.querySelectorAll('.edit-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            const id = btn.getAttribute('data-id');
+                            // Lógica para alterar (abrir modal ou redirecionar)
+                            const { data, error } = await supabaseClient
+                                .from('despesas')
+                                .select('data, descricao, valor, categoria')
+                                .eq('id', id)
+                                .single();
+                            if (error) {
+                                feedback.textContent = 'Erro ao carregar despesa: ' + error.message;
+                                feedback.classList.add('error');
+                            } else {
+                                // Redirecionar para despesas.html com dados pré-preenchidos (simplificado)
+                                window.location.href = `despesas.html?edit=${id}&data=${data.data}&descricao=${encodeURIComponent(data.descricao)}&valor=${data.valor}&categoria=${data.categoria}`;
+                            }
+                        });
+                    });
+                    document.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                                const id = btn.getAttribute('data-id');
+                                const { error } = await supabaseClient
+                                    .from('despesas')
+                                    .delete()
+                                    .eq('id', id)
+                                    .eq('user_id', session.user.id);
+                                if (error) {
+                                    feedback.textContent = 'Erro ao excluir despesa: ' + error.message;
+                                    feedback.classList.add('error');
+                                } else {
+                                    feedback.textContent = 'Despesa excluída com sucesso!';
+                                    feedback.classList.add('success');
+                                    setTimeout(() => {
+                                        feedback.classList.remove('success');
+                                        fetchDespesas(); // Recarregar a tabela
+                                    }, 3000);
+                                }
+                            }
+                        });
                     });
                 }
             }
