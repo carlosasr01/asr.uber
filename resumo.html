@@ -1,0 +1,183 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumo de Entradas</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+    <div class="container">
+        <h1>Resumo de Entradas</h1>
+        <a href="index.html" class="btn">Voltar</a>
+        <table id="entradas-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Dia da Semana</th>
+                    <th>Origem</th>
+                    <th>Valor Faturado (R$)</th>
+                    <th>Viagens</th>
+                    <th>Quilômetros</th>
+                    <th>Horas</th>
+                    <th>Criado Em</th>
+                </tr>
+            </thead>
+            <tbody id="entradas-body"></tbody>
+        </table>
+        <p id="feedback"></p>
+    </div>
+    <script>
+        // Carregar a biblioteca Supabase dinamicamente
+        const supabaseScript = document.createElement('script');
+        supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+        supabaseScript.async = true;
+        document.head.appendChild(supabaseScript);
+
+        supabaseScript.onload = async function () {
+            console.log('Supabase CDN carregado com sucesso.');
+
+            // Inicialização do Supabase
+            const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
+            const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            console.log('Supabase cliente inicializado.');
+
+            // Verificar autenticação
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                console.log('Usuário não autenticado, redirecionando para login.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const entradasBody = document.getElementById('entradas-body');
+            const feedback = document.getElementById('feedback');
+
+            // Função para formatar data (DD/MM/YYYY)
+            function formatDate(dateStr) {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            }
+
+            // Função para formatar timestamp (DD/MM/YYYY HH:MM)
+            function formatTimestamp(timestamp) {
+                const date = new Date(timestamp);
+                return date.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            // Função para formatar interval (HH:MM)
+            function formatInterval(interval) {
+                if (!interval) return '00:00';
+                const regex = /(?:(\d+)\s+hours)?\s*(?:(\d+)\s+minutes)?/;
+                const match = interval.match(regex);
+                const hours = match[1] ? parseInt(match[1]) : 0;
+                const minutes = match[2] ? parseInt(match[2]) : 0;
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+
+            // Função para listar entradas
+            async function fetchEntradas() {
+                const { data, error } = await supabaseClient
+                    .from('entradas')
+                    .select(`
+                        id,
+                        data,
+                        dia_semana,
+                        origem_id,
+                        origens (nome),
+                        valor_faturado,
+                        qtd_viagens,
+                        qtd_quilometros,
+                        qtd_horas,
+                        criado_em
+                    `)
+                    .order('data', { ascending: false });
+                if (error) {
+                    console.error('Erro ao buscar entradas:', error.message);
+                    feedback.textContent = 'Erro ao carregar entradas: ' + error.message;
+                    return;
+                }
+                console.log('Entradas encontradas:', data);
+                entradasBody.innerHTML = ''; // Limpar tabela
+                if (data.length === 0) {
+                    feedback.textContent = 'Nenhuma entrada encontrada.';
+                } else {
+                    data.forEach(entrada => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${formatDate(entrada.data)}</td>
+                            <td>${entrada.dia_semana}</td>
+                            <td>${entrada.origens.nome}</td>
+                            <td>${entrada.valor_faturado.toFixed(2)}</td>
+                            <td>${entrada.qtd_viagens}</td>
+                            <td>${entrada.qtd_quilometros.toFixed(2)}</td>
+                            <td>${formatInterval(entrada.qtd_horas)}</td>
+                            <td>${formatTimestamp(entrada.criado_em)}</td>
+                        `;
+                        entradasBody.appendChild(tr);
+                    });
+                }
+            }
+
+            // Carregar entradas ao iniciar
+            fetchEntradas();
+        };
+
+        supabaseScript.onerror = function () {
+            console.error('Erro ao carregar a Supabase CDN.');
+            document.getElementById('feedback').textContent = 'Falha ao carregar a biblioteca Supabase.';
+        };
+    </script>
+</body>
+</html>
