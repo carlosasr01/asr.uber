@@ -43,7 +43,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Entradas</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
@@ -59,7 +59,7 @@
                 <button type="submit">Entrar</button>
             </form>
             <p id="auth-feedback"></p>
-            <p>Não tem conta? <a href="#" id="signup-link">Cadastre-se</a></p>
+            <p>Não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
         </div>
         <div id="app-section" style="display: none;">
             <h2>Bem-vindo!</h2>
@@ -89,7 +89,6 @@
             const appSection = document.getElementById('app-section');
             const loginForm = document.getElementById('login-form');
             const authFeedback = document.getElementById('auth-feedback');
-            const signupLink = document.getElementById('signup-link');
             const logoutBtn = document.getElementById('logout-btn');
 
             // Verificar autenticação inicial
@@ -118,21 +117,6 @@
                     authSection.style.display = 'none';
                     appSection.style.display = 'block';
                     authFeedback.textContent = '';
-                }
-            });
-
-            // Cadastro
-            signupLink.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-                const { error } = await supabaseClient.auth.signUp({ email, password });
-                if (error) {
-                    console.error('Erro ao cadastrar:', error.message);
-                    authFeedback.textContent = 'Erro ao cadastrar: ' + error.message;
-                } else {
-                    console.log('Cadastro bem-sucedido, verifique seu email.');
-                    authFeedback.textContent = 'Cadastro bem-sucedido! Verifique seu email para confirmar.';
                 }
             });
 
