@@ -43,29 +43,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro de Usuário</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
     <div class="container">
         <h1>Cadastro de Usuário</h1>
-        <a href="index.html" class="btn">Voltar</a>
+        <a href="index.html" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Voltar</a>
         <form id="cadastro-form">
-            <label for="email">Email:</label>
-            <input type="email" id="email" required>
-            
-            <label for="password">Senha:</label>
-            <input type="password" id="password" minlength="6" required>
-            
-            <label for="confirm-password">Confirmar Senha:</label>
-            <input type="password" id="confirm-password" minlength="6" required>
-            
-            <button type="submit">Cadastrar</button>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Senha:</label>
+                <input type="password" id="password" minlength="6" required>
+            </div>
+            <div class="form-group">
+                <label for="confirm-password">Confirmar Senha:</label>
+                <input type="password" id="confirm-password" minlength="6" required>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Cadastrar</button>
         </form>
         <p id="feedback"></p>
     </div>
     <script>
-        // Carregar a biblioteca Supabase dinamicamente
         const supabaseScript = document.createElement('script');
         supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
         supabaseScript.async = true;
@@ -73,8 +77,6 @@
 
         supabaseScript.onload = async function () {
             console.log('Supabase CDN carregado com sucesso.');
-
-            // Inicialização do Supabase
             const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
             const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
             const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -89,29 +91,33 @@
                 const password = document.getElementById('password').value;
                 const confirmPassword = document.getElementById('confirm-password').value;
 
-                // Validações
                 if (password.length < 6) {
                     feedback.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+                    feedback.classList.add('error');
                     return;
                 }
                 if (password !== confirmPassword) {
                     feedback.textContent = 'As senhas não coincidem.';
+                    feedback.classList.add('error');
                     return;
                 }
                 if (!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
                     feedback.textContent = 'Por favor, insira um email válido.';
+                    feedback.classList.add('error');
                     return;
                 }
 
-                // Cadastrar usuário
                 const { data, error } = await supabaseClient.auth.signUp({ email, password });
                 if (error) {
                     console.error('Erro ao cadastrar:', error.message);
                     feedback.textContent = 'Erro ao cadastrar: ' + error.message;
+                    feedback.classList.add('error');
                 } else {
                     console.log('Cadastro bem-sucedido:', data);
-                    feedback.textContent = 'Cadastro bem-sucedido! Verifique sua caixa de entrada para realizar o login.';
+                    feedback.textContent = 'Cadastro bem-sucedido! Verifique seu email para confirmar.';
+                    feedback.classList.add('success');
                     cadastroForm.reset();
+                    setTimeout(() => feedback.classList.remove('success'), 5000);
                 }
             });
         };
@@ -119,6 +125,7 @@
         supabaseScript.onerror = function () {
             console.error('Erro ao carregar a Supabase CDN.');
             document.getElementById('feedback').textContent = 'Falha ao carregar a biblioteca Supabase.';
+            feedback.classList.add('error');
         };
     </script>
 </body>
