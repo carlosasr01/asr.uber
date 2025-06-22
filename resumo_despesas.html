@@ -52,79 +52,91 @@
             const feedback = document.getElementById('feedback');
 
             async function fetchDespesas() {
-                const { data, error } = await supabaseClient
-                    .from('despesas')
-                    .select('id, data, descricao, valor, categoria, observacao')
-                    .eq('user_id', session.user.id)
-                    .order('data', { ascending: false });
-                if (error) {
-                    console.error('Erro ao buscar despesas:', error.message);
-                    feedback.textContent = 'Erro ao carregar despesas: ' + error.message;
-                    feedback.classList.add('error');
-                    return;
-                }
-                console.log('Despesas encontradas:', data);
-                const tbody = despesasTable.querySelector('tbody');
-                tbody.innerHTML = '';
-                if (data.length === 0) {
-                    feedback.textContent = 'Nenhuma despesa encontrada.';
-                    feedback.classList.add('error');
-                } else {
-                    data.forEach(despesa => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td data-label="Data">${despesa.data}</td>
-                            <td data-label="Descrição">${despesa.descricao}</td>
-                            <td data-label="Valor (R$)">${despesa.valor.toFixed(2)}</td>
-                            <td data-label="Categoria">${despesa.categoria}</td>
-                            <td data-label="Observação">${despesa.observacao || '-'}</td>
-                            <td data-label="Ações">
-                                <button class="edit-btn" data-id="${despesa.id}"><i class="fas fa-edit"></i> Alterar</button>
-                                <button class="delete-btn" data-id="${despesa.id}"><i class="fas fa-trash"></i> Excluir</button>
-                            </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                    // Adicionar eventos aos botões
-                    document.querySelectorAll('.edit-btn').forEach(btn => {
-                        btn.addEventListener('click', async () => {
-                            const id = btn.getAttribute('data-id');
-                            const { data, error } = await supabaseClient
-                                .from('despesas')
-                                .select('data, descricao, valor, categoria, observacao')
-                                .eq('id', id)
-                                .single();
-                            if (error) {
-                                feedback.textContent = 'Erro ao carregar despesa: ' + error.message;
-                                feedback.classList.add('error');
-                            } else {
-                                window.location.href = `despesas.html?edit=${id}&data=${data.data}&descricao=${encodeURIComponent(data.descricao)}&valor=${data.valor}&categoria=${data.categoria}&observacao=${encodeURIComponent(data.observacao || '')}`;
-                            }
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('despesas')
+                        .select('id, data, descricao, valor, categoria, observacao')
+                        .eq('user_id', session.user.id)
+                        .order('data', { ascending: false });
+                    if (error) {
+                        throw new Error(error.message);
+                    }
+                    console.log('Despesas encontradas:', data);
+                    const tbody = despesasTable.querySelector('tbody');
+                    tbody.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        feedback.textContent = 'Nenhuma despesa encontrada.';
+                        feedback.classList.add('error');
+                    } else {
+                        data.forEach(despesa => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td data-label="Data">${despesa.data || 'N/A'}</td>
+                                <td data-label="Descrição">${despesa.descricao || 'Sem descrição'}</td>
+                                <td data-label="Valor (R$)">${despesa.valor ? despesa.valor.toFixed(2) : '0.00'}</td>
+                                <td data-label="Categoria">${despesa.categoria || 'Sem categoria'}</td>
+                                <td data-label="Observação">${despesa.observacao || '-'}</td>
+                                <td data-label="Ações">
+                                    <button class="edit-btn" data-id="${despesa.id}"><i class="fas fa-edit"></i> Alterar</button>
+                                    <button class="delete-btn" data-id="${despesa.id}"><i class="fas fa-trash"></i> Excluir</button>
+                                </td>
+                            `;
+                            tbody.appendChild(row);
                         });
-                    });
-                    document.querySelectorAll('.delete-btn').forEach(btn => {
-                        btn.addEventListener('click', async () => {
-                            if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                        // Adicionar eventos aos botões após a criação
+                        document.querySelectorAll('.edit-btn').forEach(btn => {
+                            btn.addEventListener('click', async () => {
                                 const id = btn.getAttribute('data-id');
-                                const { error } = await supabaseClient
+                                const { data, error } = await supabaseClient
                                     .from('despesas')
-                                    .delete()
+                                    .select('id, data, descricao, valor, categoria, observacao')
                                     .eq('id', id)
-                                    .eq('user_id', session.user.id);
+                                    .eq('user_id', session.user.id)
+                                    .single();
                                 if (error) {
-                                    feedback.textContent = 'Erro ao excluir despesa: ' + error.message;
+                                    feedback.textContent = 'Erro ao carregar despesa: ' + error.message;
                                     feedback.classList.add('error');
                                 } else {
-                                    feedback.textContent = 'Despesa excluída com sucesso!';
-                                    feedback.classList.add('success');
-                                    setTimeout(() => {
-                                        feedback.classList.remove('success');
-                                        fetchDespesas();
-                                    }, 3000);
+                                    const queryParams = new URLSearchParams({
+                                        edit: data.id,
+                                        data: data.data || '',
+                                        descricao: encodeURIComponent(data.descricao || ''),
+                                        valor: data.valor || '0.00',
+                                        categoria: data.categoria || '',
+                                        observacao: encodeURIComponent(data.observacao || '')
+                                    }).toString();
+                                    window.location.href = `despesas.html?${queryParams}`;
                                 }
-                            }
+                            });
                         });
-                    });
+                        document.querySelectorAll('.delete-btn').forEach(btn => {
+                            btn.addEventListener('click', async () => {
+                                if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                                    const id = btn.getAttribute('data-id');
+                                    const { error } = await supabaseClient
+                                        .from('despesas')
+                                        .delete()
+                                        .eq('id', id)
+                                        .eq('user_id', session.user.id);
+                                    if (error) {
+                                        feedback.textContent = 'Erro ao excluir despesa: ' + error.message;
+                                        feedback.classList.add('error');
+                                    } else {
+                                        feedback.textContent = 'Despesa excluída com sucesso!';
+                                        feedback.classList.add('success');
+                                        setTimeout(() => {
+                                            feedback.classList.remove('success');
+                                            fetchDespesas(); // Recarregar a tabela
+                                        }, 3000);
+                                    }
+                                }
+                            });
+                        });
+                    }
+                } catch (error) {
+                    console.error('Erro na função fetchDespesas:', error);
+                    feedback.textContent = 'Erro ao carregar despesas: ' + error.message;
+                    feedback.classList.add('error');
                 }
             }
 
@@ -133,7 +145,8 @@
 
         supabaseScript.onerror = function () {
             console.error('Erro ao carregar a Supabase CDN.');
-            document.getElementById('feedback').textContent = 'Falha ao carregar a biblioteca Supabase.';
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = 'Falha ao carregar a biblioteca Supabase.';
             feedback.classList.add('error');
         };
     </script>
