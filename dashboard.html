@@ -1,0 +1,143 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard</h1>
+        <a href="index.html" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Voltar</a>
+        <div class="dashboard-section">
+            <div class="dashboard-card">
+                <h2>Entradas (R$)</h2>
+                <p id="total-entradas">0.00</p>
+            </div>
+            <div class="dashboard-card">
+                <h2>Saídas (R$)</h2>
+                <p id="total-despesas">0.00</p>
+            </div>
+            <div class="dashboard-card">
+                <h2>Lucro/Prejuízo (R$)</h2>
+                <p id="lucro-prejuizo">0.00</p>
+            </div>
+        </div>
+        <p id="feedback"></p>
+    </div>
+    <script>
+        const supabaseScript = document.createElement('script');
+        supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+        supabaseScript.async = true;
+        document.head.appendChild(supabaseScript);
+
+        supabaseScript.onload = async function () {
+            console.log('Supabase CDN carregado com sucesso.');
+            const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
+            const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            console.log('Supabase cliente inicializado.');
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                console.log('Usuário não autenticado, redirecionando para login.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const totalEntradas = document.getElementById('total-entradas');
+            const totalDespesas = document.getElementById('total-despesas');
+            const lucroPrejuizo = document.getElementById('lucro-prejuizo');
+            const feedback = document.getElementById('feedback');
+            const today = new Date().toISOString().split('T')[0]; // 2025-06-22
+
+            async function fetchDashboardData() {
+                try {
+                    // Total de entradas
+                    const { data: entradasData, error: entradasError } = await supabaseClient
+                        .from('entradas')
+                        .select('valor_faturado')
+                        .eq('user_id', session.user.id)
+                        .eq('data', today);
+                    if (entradasError) throw entradasError;
+                    const totalEntradasValue = entradasData.reduce((sum, entry) => sum + (entry.valor_faturado || 0), 0);
+
+                    // Total de despesas
+                    const { data: despesasData, error: despesasError } = await supabaseClient
+                        .from('despesas')
+                        .select('valor')
+                        .eq('user_id', session.user.id)
+                        .eq('data', today);
+                    if (despesasError) throw despesasError;
+                    const totalDespesasValue = despesasData.reduce((sum, despesa) => sum + (despesa.valor || 0), 0);
+
+                    // Calcular lucro/prejuízo
+                    const lucro = totalEntradasValue - totalDespesasValue;
+
+                    // Exibir resultados
+                    totalEntradas.textContent = totalEntradasValue.toFixed(2);
+                    totalDespesas.textContent = totalDespesasValue.toFixed(2);
+                    lucroPrejuizo.textContent = lucro.toFixed(2);
+                    lucroPrejuizo.style.color = lucro >= 0 ? '#4CAF50' : '#D32F2F';
+                } catch (error) {
+                    console.error('Erro ao carregar dados do dashboard:', error);
+                    feedback.textContent = 'Erro ao carregar dados: ' + error.message;
+                    feedback.classList.add('error');
+                }
+            }
+
+            fetchDashboardData();
+        };
+
+        supabaseScript.onerror = function () {
+            console.error('Erro ao carregar a Supabase CDN.');
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = 'Falha ao carregar a biblioteca Supabase.';
+            feedback.classList.add('error');
+        };
+    </script>
+</body>
+</html>
