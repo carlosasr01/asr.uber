@@ -13,7 +13,7 @@
         <a href="index.html" class="btn">Voltar</a>
         <form id="origem-form">
             <label for="nome">Nome da Origem:</label>
-            <input type="text" id="nome" required>
+            <input type="text" id="nome" maxlength="50" required>
             <button type="submit">Adicionar</button>
         </form>
         <h3>Origens Existentes</h3>
@@ -52,7 +52,7 @@
             async function fetchOrigens() {
                 const { data, error } = await supabaseClient
                     .from('origens')
-                    .select('*')
+                    .select('id, nome')
                     .order('nome', { ascending: true });
                 if (error) {
                     console.error('Erro ao buscar origens:', error.message);
@@ -66,7 +66,7 @@
                 } else {
                     data.forEach(origin => {
                         const li = document.createElement('li');
-                        li.textContent = origin.nome; // Ajuste conforme a coluna da tabela
+                        li.textContent = origin.nome;
                         origensList.appendChild(li);
                     });
                 }
@@ -75,13 +75,17 @@
             // Função para adicionar origem
             origemForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const nome = document.getElementById('nome').value;
+                const nome = document.getElementById('nome').value.trim();
                 const { data, error } = await supabaseClient
                     .from('origens')
-                    .insert([{ nome }]);
+                    .insert([{ nome, user_id: session.user.id }]);
                 if (error) {
                     console.error('Erro ao adicionar origem:', error.message);
-                    feedback.textContent = 'Erro ao adicionar origem: ' + error.message;
+                    if (error.message.includes('duplicate key value violates unique constraint')) {
+                        feedback.textContent = 'Erro: Já existe uma origem com esse nome.';
+                    } else {
+                        feedback.textContent = 'Erro ao adicionar origem: ' + error.message;
+                    }
                 } else {
                     console.log('Origem adicionada:', data);
                     feedback.textContent = 'Origem adicionada com sucesso!';
