@@ -59,7 +59,19 @@
                         .eq('user_id', session.user.id)
                         .order('data', { ascending: false });
                     if (error) {
-                        throw new Error(error.message);
+                        // Tentar sem a coluna observacao se ela não existir
+                        if (error.message.includes('column despesas.observacao does not exist')) {
+                            console.warn('Coluna observacao não encontrada, tentando sem ela.');
+                            const { data: fallbackData, error: fallbackError } = await supabaseClient
+                                .from('despesas')
+                                .select('id, data, descricao, valor, categoria')
+                                .eq('user_id', session.user.id)
+                                .order('data', { ascending: false });
+                            if (fallbackError) throw fallbackError;
+                            data = fallbackData.map(row => ({ ...row, observacao: null }));
+                        } else {
+                            throw error;
+                        }
                     }
                     console.log('Despesas encontradas:', data);
                     const tbody = despesasTable.querySelector('tbody');
@@ -94,19 +106,28 @@
                                     .eq('user_id', session.user.id)
                                     .single();
                                 if (error) {
-                                    feedback.textContent = 'Erro ao carregar despesa: ' + error.message;
-                                    feedback.classList.add('error');
-                                } else {
-                                    const queryParams = new URLSearchParams({
-                                        edit: data.id,
-                                        data: data.data || '',
-                                        descricao: encodeURIComponent(data.descricao || ''),
-                                        valor: data.valor || '0.00',
-                                        categoria: data.categoria || '',
-                                        observacao: encodeURIComponent(data.observacao || '')
-                                    }).toString();
-                                    window.location.href = `despesas.html?${queryParams}`;
+                                    if (error.message.includes('column despesas.observacao does not exist')) {
+                                        const { data: fallbackData, error: fallbackError } = await supabaseClient
+                                            .from('despesas')
+                                            .select('id, data, descricao, valor, categoria')
+                                            .eq('id', id)
+                                            .eq('user_id', session.user.id)
+                                            .single();
+                                        if (fallbackError) throw fallbackError;
+                                        data = { ...fallbackData, observacao: null };
+                                    } else {
+                                        throw error;
+                                    }
                                 }
+                                const queryParams = new URLSearchParams({
+                                    edit: data.id,
+                                    data: data.data || '',
+                                    descricao: encodeURIComponent(data.descricao || ''),
+                                    valor: data.valor || '0.00',
+                                    categoria: data.categoria || '',
+                                    observacao: encodeURIComponent(data.observacao || '')
+                                }).toString();
+                                window.location.href = `despesas.html?${queryParams}`;
                             });
                         });
                         document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -126,7 +147,7 @@
                                         feedback.classList.add('success');
                                         setTimeout(() => {
                                             feedback.classList.remove('success');
-                                            fetchDespesas(); // Recarregar a tabela
+                                            fetchDespesas();
                                         }, 3000);
                                     }
                                 }
