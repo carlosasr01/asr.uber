@@ -43,13 +43,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resumo de Entradas</title>
-    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
     <div class="container">
         <h1>Resumo de Entradas</h1>
-        <a href="index.html" class="btn">Voltar</a>
+        <a href="index.html" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Voltar</a>
         <table id="entradas-table">
             <thead>
                 <tr>
@@ -76,27 +78,33 @@
             <h2>Editar Entrada</h2>
             <form id="edit-form">
                 <input type="hidden" id="edit-id">
-                <label for="edit-data">Data:</label>
-                <input type="date" id="edit-data" required>
-                
-                <label for="edit-origem">Origem:</label>
-                <select id="edit-origem" required>
-                    <option value="">Selecione uma origem</option>
-                </select>
-                
-                <label for="edit-valor_faturado">Valor Faturado (R$):</label>
-                <input type="number" id="edit-valor_faturado" step="0.01" min="0" max="99999999.99" required>
-                
-                <label for="edit-qtd_viagens">Quantidade de Viagens:</label>
-                <input type="number" id="edit-qtd_viagens" min="0" step="1" required>
-                
-                <label for="edit-qtd_quilometros">Quilômetros Rodados:</label>
-                <input type="number" id="edit-qtd_quilometros" step="0.01" min="0" max="99999999.99" required>
-                
-                <label for="edit-qtd_horas">Horas Trabalhadas (HH:MM):</label>
-                <input type="time" id="edit-qtd_horas" required>
-                
-                <button type="submit">Salvar</button>
+                <div class="form-group">
+                    <label for="edit-data">Data:</label>
+                    <input type="date" id="edit-data" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-origem">Origem:</label>
+                    <select id="edit-origem" required>
+                        <option value="">Selecione uma origem</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-valor_faturado">Valor Faturado (R$):</label>
+                    <input type="number" id="edit-valor_faturado" step="0.01" min="0" max="99999999.99" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-qtd_viagens">Quantidade de Viagens:</label>
+                    <input type="number" id="edit-qtd_viagens" min="0" step="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-qtd_quilometros">Quilômetros Rodados:</label>
+                    <input type="number" id="edit-qtd_quilometros" step="0.01" min="0" max="99999999.99" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-qtd_horas">Horas Trabalhadas (HH:MM):</label>
+                    <input type="time" id="edit-qtd_horas" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar</button>
             </form>
             <p id="edit-feedback"></p>
         </div>
@@ -221,17 +229,17 @@
                     data.forEach(entrada => {
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td>${formatDate(entrada.data)}</td>
-                            <td>${entrada.dia_semana}</td>
-                            <td>${entrada.origens ? entrada.origens.nome : 'N/A'}</td>
-                            <td>${entrada.valor_faturado.toFixed(2)}</td>
-                            <td>${entrada.qtd_viagens}</td>
-                            <td>${entrada.qtd_quilometros.toFixed(2)}</td>
-                            <td>${formatInterval(entrada.qtd_horas)}</td>
-                            <td>${formatTimestamp(entrada.criado_em)}</td>
-                            <td>
-                                <button class="edit-btn" data-id="${entrada.id}">Editar</button>
-                                <button class="delete-btn" data-id="${entrada.id}">Excluir</button>
+                            <td data-label="Data">${formatDate(entrada.data)}</td>
+                            <td data-label="Dia da Semana">${entrada.dia_semana}</td>
+                            <td data-label="Origem">${entrada.origens ? entrada.origens.nome : 'N/A'}</td>
+                            <td data-label="Valor Faturado (R$)">${entrada.valor_faturado.toFixed(2)}</td>
+                            <td data-label="Viagens">${entrada.qtd_viagens}</td>
+                            <td data-label="Quilômetros">${entrada.qtd_quilometros.toFixed(2)}</td>
+                            <td data-label="Horas">${formatInterval(entrada.qtd_horas)}</td>
+                            <td data-label="Criado Em">${formatTimestamp(entrada.criado_em)}</td>
+                            <td data-label="Ações">
+                                <button class="btn btn-secondary edit-btn" data-id="${entrada.id}"><i class="fas fa-edit"></i> Editar</button>
+                                <button class="btn btn-danger delete-btn" data-id="${entrada.id}"><i class="fas fa-trash"></i> Excluir</button>
                             </td>
                         `;
                         entradasBody.appendChild(tr);
@@ -284,6 +292,8 @@
                 } else {
                     console.log('Entrada excluída:', id);
                     feedback.textContent = 'Entrada excluída com sucesso!';
+                    feedback.classList.add('success');
+                    setTimeout(() => feedback.classList.remove('success'), 3000);
                     fetchEntradas();
                 }
             }
@@ -307,10 +317,16 @@
                 if (error) {
                     console.error('Erro ao atualizar entrada:', error.message);
                     editFeedback.textContent = 'Erro ao atualizar entrada: ' + error.message;
+                    editFeedback.classList.add('error');
                 } else {
                     console.log('Entrada atualizada:', id);
                     editFeedback.textContent = 'Entrada atualizada com sucesso!';
-                    editModal.style.display = 'none';
+                    editFeedback.classList.add('success');
+                    setTimeout(() => {
+                        editModal.style.display = 'none';
+                        editFeedback.classList.remove('success');
+                        editFeedback.textContent = '';
+                    }, 2000);
                     fetchEntradas();
                 }
             });
@@ -336,6 +352,7 @@
         supabaseScript.onerror = function () {
             console.error('Erro ao carregar a Supabase CDN.');
             document.getElementById('feedback').textContent = 'Falha ao carregar a biblioteca Supabase.';
+            feedback.classList.add('error');
         };
     </script>
 </body>
