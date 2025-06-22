@@ -8,9 +8,10 @@
 /* Configuração geral */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: #FFFFFF;
+    background: linear-gradient(135deg, #E0E0E0 0%, #FFFFFF 100%);
     color: #212121;
     line-height: 1.6;
+    min-height: 100vh;
 }
 
 /* Contêiner principal */
@@ -67,6 +68,31 @@ h2 {
     color: white;
 }
 .btn-danger:hover {
+    background-color: #C62828;
+    transform: translateY(-1px);
+}
+
+/* Botões de Edição e Exclusão na Tabela */
+.edit-btn {
+    background-color: #FFC107;
+    color: #212121;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background-color 0.3s, transform 0.1s;
+}
+.edit-btn:hover {
+    background-color: #FFB300;
+    transform: translateY(-1px);
+}
+.delete-btn {
+    background-color: #D32F2F;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background-color 0.3s, transform 0.1s;
+    margin-left: 5px;
+}
+.delete-btn:hover {
     background-color: #C62828;
     transform: translateY(-1px);
 }
@@ -130,20 +156,6 @@ td {
 tr:last-child td {
     border-bottom: none;
 }
-.edit-btn {
-    background-color: #4CAF50;
-    padding: 6px 12px;
-}
-.edit-btn:hover {
-    background-color: #45A049;
-}
-.delete-btn {
-    background-color: #D32F2F;
-    padding: 6px 12px;
-}
-.delete-btn:hover {
-    background-color: #C62828;
-}
 
 /* Modal */
 .modal {
@@ -173,7 +185,7 @@ tr:last-child td {
     right: 15px;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #212121;
+    color: #424242;
 }
 .close:hover {
     color: #D32F2F;
@@ -223,19 +235,19 @@ tr:last-child td {
 }
 
 @media (max-width: 600px) {
-    #entradas-table {
+    #despesas-table {
         display: flex;
         flex-direction: column;
     }
-    #entradas-table thead {
+    #despesas-table thead {
         display: none;
     }
-    #entradas-table tbody {
+    #despesas-table tbody {
         display: flex;
         flex-direction: column;
         gap: 1rem;
     }
-    #entradas-table tr {
+    #despesas-table tr {
         display: flex;
         flex-direction: column;
         background-color: #FFFFFF;
@@ -243,19 +255,19 @@ tr:last-child td {
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         padding: 1rem;
     }
-    #entradas-table td {
+    #despesas-table td {
         display: flex;
         justify-content: space-between;
         padding: 0.5rem 0;
         border: none;
     }
-    #entradas-table td:before {
+    #despesas-table td:before {
         content: attr(data-label);
         font-weight: 600;
         color: #212121;
         width: 40%;
     }
-    #entradas-table td:last-child {
+    #despesas-table td:last-child {
         flex-direction: row;
         justify-content: center;
         gap: 0.5rem;
