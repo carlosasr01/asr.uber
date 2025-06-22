@@ -1,43 +1,89 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inserir Entrada</title>
-    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
     <div class="container">
         <h1>Inserir Entrada</h1>
-        <a href="index.html" class="btn">Voltar</a>
+        <a href="index.html" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Voltar</a>
         <form id="entrada-form">
-            <label for="data">Data:</label>
-            <input type="date" id="data" required>
-            
-            <label for="origem">Origem:</label>
-            <select id="origem" required>
-                <option value="">Selecione uma origem</option>
-            </select>
-            
-            <label for="valor_faturado">Valor Faturado (R$):</label>
-            <input type="number" id="valor_faturado" step="0.01" min="0" max="99999999.99" required>
-            
-            <label for="qtd_viagens">Quantidade de Viagens:</label>
-            <input type="number" id="qtd_viagens" min="0" step="1" required>
-            
-            <label for="qtd_quilometros">Quilômetros Rodados:</label>
-            <input type="number" id="qtd_quilometros" step="0.01" min="0" max="99999999.99" required>
-            
-            <label for="qtd_horas">Horas Trabalhadas (HH:MM):</label>
-            <input type="time" id="qtd_horas" required>
-            
-            <button type="submit">Salvar</button>
+            <div class="form-group">
+                <label for="data">Data:</label>
+                <input type="date" id="data" required>
+            </div>
+            <div class="form-group">
+                <label for="origem">Origem:</label>
+                <select id="origem" required>
+                    <option value="">Selecione uma origem</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="valor_faturado">Valor Faturado (R$):</label>
+                <input type="number" id="valor_faturado" step="0.01" min="0" max="99999999.99" required>
+            </div>
+            <div class="form-group">
+                <label for="qtd_viagens">Quantidade de Viagens:</label>
+                <input type="number" id="qtd_viagens" min="0" step="1" required>
+            </div>
+            <div class="form-group">
+                <label for="qtd_quilometros">Quilômetros Rodados:</label>
+                <input type="number" id="qtd_quilometros" step="0.01" min="0" max="99999999.99" required>
+            </div>
+            <div class="form-group">
+                <label for="qtd_horas">Horas Trabalhadas (HH:MM):</label>
+                <input type="time" id="qtd_horas" required>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
         </form>
         <p id="feedback"></p>
     </div>
     <script>
-        // Carregar a biblioteca Supabase dinamicamente
         const supabaseScript = document.createElement('script');
         supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
         supabaseScript.async = true;
@@ -45,14 +91,11 @@
 
         supabaseScript.onload = async function () {
             console.log('Supabase CDN carregado com sucesso.');
-
-            // Inicialização do Supabase
             const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
             const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
             const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
             console.log('Supabase cliente inicializado.');
 
-            // Verificar autenticação
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
                 console.log('Usuário não autenticado, redirecionando para login.');
@@ -60,41 +103,35 @@
                 return;
             }
 
-            const origemSelect = document.getElementById('origem');
             const entradaForm = document.getElementById('entrada-form');
+            const origemSelect = document.getElementById('origem');
             const feedback = document.getElementById('feedback');
 
-            // Função para listar origens no <select>
-            async function fetchOrigens() {
+            async function loadOrigens() {
                 const { data, error } = await supabaseClient
                     .from('origens')
                     .select('id, nome')
                     .order('nome', { ascending: true });
                 if (error) {
-                    console.error('Erro ao buscar origens:', error.message);
+                    console.error('Erro ao carregar origens:', error.message);
                     feedback.textContent = 'Erro ao carregar origens: ' + error.message;
+                    feedback.classList.add('error');
                     return;
                 }
-                console.log('Origens encontradas:', data);
-                if (data.length === 0) {
-                    origemSelect.innerHTML = '<option value="">Nenhuma origem disponível</option>';
-                } else {
-                    data.forEach(origin => {
-                        const option = document.createElement('option');
-                        option.value = origin.id;
-                        option.textContent = origin.nome;
-                        origemSelect.appendChild(option);
-                    });
-                }
+                origemSelect.innerHTML = '<option value="">Selecione uma origem</option>';
+                data.forEach(origin => {
+                    const option = document.createElement('option');
+                    option.value = origin.id;
+                    option.textContent = origin.nome;
+                    origemSelect.appendChild(option);
+                });
             }
 
-            // Função para converter HH:MM para interval
             function timeToInterval(timeStr) {
                 const [hours, minutes] = timeStr.split(':').map(Number);
                 return `${hours} hours ${minutes} minutes`;
             }
 
-            // Função para salvar entrada
             entradaForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const entrada = {
@@ -106,28 +143,29 @@
                     qtd_horas: timeToInterval(document.getElementById('qtd_horas').value),
                     user_id: session.user.id
                 };
-                const { data, error } = await supabaseClient
+                const { error } = await supabaseClient
                     .from('entradas')
                     .insert([entrada]);
                 if (error) {
-                    console.error('Erro ao salvar entrada:', error.message);
-                    feedback.textContent = 'Erro ao salvar entrada: ' + error.message;
+                    console.error('Erro ao adicionar entrada:', error.message);
+                    feedback.textContent = 'Erro ao adicionar entrada: ' + error.message;
+                    feedback.classList.add('error');
                 } else {
-                    console.log('Entrada salva:', data);
-                    feedback.textContent = 'Entrada salva com sucesso!';
-                    entradaForm.reset(); // Limpar formulário
-                    origemSelect.innerHTML = '<option value="">Selecione uma origem</option>'; // Resetar select
-                    fetchOrigens(); // Recarregar origens
+                    console.log('Entrada adicionada:', entrada);
+                    feedback.textContent = 'Entrada adicionada com sucesso!';
+                    feedback.classList.add('success');
+                    setTimeout(() => feedback.classList.remove('success'), 3000);
+                    entradaForm.reset();
                 }
             });
 
-            // Carregar origens ao iniciar
-            fetchOrigens();
+            loadOrigens();
         };
 
         supabaseScript.onerror = function () {
             console.error('Erro ao carregar a Supabase CDN.');
             document.getElementById('feedback').textContent = 'Falha ao carregar a biblioteca Supabase.';
+            feedback.classList.add('error');
         };
     </script>
 </body>
