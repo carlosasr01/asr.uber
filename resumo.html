@@ -61,12 +61,47 @@
                     <th>Quilômetros</th>
                     <th>Horas</th>
                     <th>Criado Em</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody id="entradas-body"></tbody>
         </table>
         <p id="feedback"></p>
     </div>
+
+    <!-- Modal para edição -->
+    <div id="edit-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span id="close-modal" class="close">&times;</span>
+            <h2>Editar Entrada</h2>
+            <form id="edit-form">
+                <input type="hidden" id="edit-id">
+                <label for="edit-data">Data:</label>
+                <input type="date" id="edit-data" required>
+                
+                <label for="edit-origem">Origem:</label>
+                <select id="edit-origem" required>
+                    <option value="">Selecione uma origem</option>
+                </select>
+                
+                <label for="edit-valor_faturado">Valor Faturado (R$):</label>
+                <input type="number" id="edit-valor_faturado" step="0.01" min="0" max="99999999.99" required>
+                
+                <label for="edit-qtd_viagens">Quantidade de Viagens:</label>
+                <input type="number" id="edit-qtd_viagens" min="0" step="1" required>
+                
+                <label for="edit-qtd_quilometros">Quilômetros Rodados:</label>
+                <input type="number" id="edit-qtd_quilometros" step="0.01" min="0" max="99999999.99" required>
+                
+                <label for="edit-qtd_horas">Horas Trabalhadas (HH:MM):</label>
+                <input type="time" id="edit-qtd_horas" required>
+                
+                <button type="submit">Salvar</button>
+            </form>
+            <p id="edit-feedback"></p>
+        </div>
+    </div>
+
     <script>
         // Carregar a biblioteca Supabase dinamicamente
         const supabaseScript = document.createElement('script');
@@ -93,6 +128,10 @@
 
             const entradasBody = document.getElementById('entradas-body');
             const feedback = document.getElementById('feedback');
+            const editModal = document.getElementById('edit-modal');
+            const closeModal = document.getElementById('close-modal');
+            const editForm = document.getElementById('edit-form');
+            const editFeedback = document.getElementById('edit-feedback');
 
             // Função para formatar data (DD/MM/YYYY)
             function formatDate(dateStr) {
@@ -124,6 +163,32 @@
                 const hours = match[1] ? parseInt(match[1]) : 0;
                 const minutes = match[2] ? parseInt(match[2]) : 0;
                 return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+
+            // Função para converter HH:MM para interval
+            function timeToInterval(timeStr) {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                return `${hours} hours ${minutes} minutes`;
+            }
+
+            // Função para carregar origens no <select>
+            async function loadOrigens(selectElement) {
+                const { data, error } = await supabaseClient
+                    .from('origens')
+                    .select('id, nome')
+                    .order('nome', { ascending: true });
+                if (error) {
+                    console.error('Erro ao carregar origens:', error.message);
+                    editFeedback.textContent = 'Erro ao carregar origens: ' + error.message;
+                    return;
+                }
+                selectElement.innerHTML = '<option value="">Selecione uma origem</option>';
+                data.forEach(origin => {
+                    const option = document.createElement('option');
+                    option.value = origin.id;
+                    option.textContent = origin.nome;
+                    selectElement.appendChild(option);
+                });
             }
 
             // Função para listar entradas
@@ -164,11 +229,105 @@
                             <td>${entrada.qtd_quilometros.toFixed(2)}</td>
                             <td>${formatInterval(entrada.qtd_horas)}</td>
                             <td>${formatTimestamp(entrada.criado_em)}</td>
+                            <td>
+                                <button class="edit-btn" data-id="${entrada.id}">Editar</button>
+                                <button class="delete-btn" data-id="${entrada.id}">Excluir</button>
+                            </td>
                         `;
                         entradasBody.appendChild(tr);
                     });
+
+                    // Adicionar eventos aos botões
+                    document.querySelectorAll('.edit-btn').forEach(btn => {
+                        btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+                    });
+                    document.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.addEventListener('click', () => deleteEntrada(btn.dataset.id));
+                    });
                 }
             }
+
+            // Função para abrir o modal de edição
+            async function openEditModal(id) {
+                const { data, error } = await supabaseClient
+                    .from('entradas')
+                    .select('id, data, origem_id, valor_faturado, qtd_viagens, qtd_quilometros, qtd_horas')
+                    .eq('id', id)
+                    .single();
+                if (error) {
+                    console.error('Erro ao carregar entrada:', error.message);
+                    feedback.textContent = 'Erro ao carregar entrada: ' + error.message;
+                    return;
+                }
+                document.getElementById('edit-id').value = data.id;
+                document.getElementById('edit-data').value = data.data;
+                document.getElementById('edit-valor_faturado').value = data.valor_faturado;
+                document.getElementById('edit-qtd_viagens').value = data.qtd_viagens;
+                document.getElementById('edit-qtd_quilometros').value = data.qtd_quilometros;
+                document.getElementById('edit-qtd_horas').value = formatInterval(data.qtd_horas);
+                const origemSelect = document.getElementById('edit-origem');
+                await loadOrigens(origemSelect);
+                origemSelect.value = data.origem_id;
+                editModal.style.display = 'block';
+            }
+
+            // Função para excluir entrada
+            async function deleteEntrada(id) {
+                if (!confirm('Tem certeza que deseja excluir esta entrada?')) return;
+                const { error } = await supabaseClient
+                    .from('entradas')
+                    .delete()
+                    .eq('id', id);
+                if (error) {
+                    console.error('Erro ao excluir entrada:', error.message);
+                    feedback.textContent = 'Erro ao excluir entrada: ' + error.message;
+                } else {
+                    console.log('Entrada excluída:', id);
+                    feedback.textContent = 'Entrada excluída com sucesso!';
+                    fetchEntradas();
+                }
+            }
+
+            // Função para salvar alterações
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const entrada = {
+                    data: document.getElementById('edit-data').value,
+                    origem_id: parseInt(document.getElementById('edit-origem').value),
+                    valor_faturado: parseFloat(document.getElementById('edit-valor_faturado').value),
+                    qtd_viagens: parseInt(document.getElementById('edit-qtd_viagens').value),
+                    qtd_quilometros: parseFloat(document.getElementById('edit-qtd_quilometros').value),
+                    qtd_horas: timeToInterval(document.getElementById('edit-qtd_horas').value)
+                };
+                const id = document.getElementById('edit-id').value;
+                const { error } = await supabaseClient
+                    .from('entradas')
+                    .update(entrada)
+                    .eq('id', id);
+                if (error) {
+                    console.error('Erro ao atualizar entrada:', error.message);
+                    editFeedback.textContent = 'Erro ao atualizar entrada: ' + error.message;
+                } else {
+                    console.log('Entrada atualizada:', id);
+                    editFeedback.textContent = 'Entrada atualizada com sucesso!';
+                    editModal.style.display = 'none';
+                    fetchEntradas();
+                }
+            });
+
+            // Fechar modal
+            closeModal.addEventListener('click', () => {
+                editModal.style.display = 'none';
+                editFeedback.textContent = '';
+            });
+
+            // Fechar modal ao clicar fora
+            window.addEventListener('click', (e) => {
+                if (e.target === editModal) {
+                    editModal.style.display = 'none';
+                    editFeedback.textContent = '';
+                }
+            });
 
             // Carregar entradas ao iniciar
             fetchEntradas();
