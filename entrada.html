@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inserir Entrada</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
     <div class="container">
@@ -35,8 +36,91 @@
         </form>
         <p id="feedback"></p>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="scripts/supabase.js"></script>
-    <script src="scripts/entrada.js"></script>
+    <script>
+        // Carregar a biblioteca Supabase dinamicamente
+        const supabaseScript = document.createElement('script');
+        supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+        supabaseScript.async = true;
+        document.head.appendChild(supabaseScript);
+
+        supabaseScript.onload = async function () {
+            console.log('Supabase CDN carregado com sucesso.');
+
+            // Inicialização do Supabase
+            const supabaseUrl = 'https://nnoyrthjrmqjrhyjvvcn.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ub3lydGhqcm1xanJoeWp2dmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNjU4ODksImV4cCI6MjA2NTc0MTg4OX0.HYOVh5eXhsrWXuQU9GXUa-rW9RwOLfcDl__jyhWd0-I';
+            const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            console.log('Supabase cliente inicializado.');
+
+            // Verificar autenticação
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                console.log('Usuário não autenticado, redirecionando para login.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const origemSelect = document.getElementById('origem');
+            const entradaForm = document.getElementById('entrada-form');
+            const feedback = document.getElementById('feedback');
+
+            // Função para listar origens no <select>
+            async function fetchOrigens() {
+                const { data, error } = await supabaseClient
+                    .from('origens')
+                    .select('id, nome')
+                    .order('nome', { ascending: true });
+                if (error) {
+                    console.error('Erro ao buscar origens:', error.message);
+                    feedback.textContent = 'Erro ao carregar origens: ' + error.message;
+                    return;
+                }
+                console.log('Origens encontradas:', data);
+                if (data.length === 0) {
+                    origemSelect.innerHTML = '<option value="">Nenhuma origem disponível</option>';
+                } else {
+                    data.forEach(origin => {
+                        const option = document.createElement('option');
+                        option.value = origin.id;
+                        option.textContent = origin.nome;
+                        origemSelect.appendChild(option);
+                    });
+                }
+            }
+
+            // Função para salvar entrada
+            entradaForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const entrada = {
+                    data: document.getElementById('data').value,
+                    origem_id: document.getElementById('origem').value,
+                    valor_faturado: parseFloat(document.getElementById('valor_faturado').value),
+                    qtd_viagens: parseInt(document.getElementById('qtd_viagens').value),
+                    qtd_quilometros: parseFloat(document.getElementById('qtd_quilometros').value),
+                    qtd_horas: document.getElementById('qtd_horas').value,
+                    user_id: session.user.id // Associar ao usuário autenticado
+                };
+                const { data, error } = await supabaseClient
+                    .from('entradas')
+                    .insert([entrada]);
+                if (error) {
+                    console.error('Erro ao salvar entrada:', error.message);
+                    feedback.textContent = 'Erro ao salvar entrada: ' + error.message;
+                } else {
+                    console.log('Entrada salva:', data);
+                    feedback.textContent = 'Entrada salva com sucesso!';
+                    entradaForm.reset(); // Limpar formulário
+                }
+            });
+
+            // Carregar origens ao iniciar
+            fetchOrigens();
+        };
+
+        supabaseScript.onerror = function () {
+            console.error('Erro ao carregar a Supabase CDN.');
+            document.getElementById('feedback').textContent = 'Falha ao carregar a biblioteca Supabase.';
+        };
+    </script>
 </body>
 </html>
