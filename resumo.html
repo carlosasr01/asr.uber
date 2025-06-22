@@ -135,12 +135,12 @@
                         data,
                         dia_semana,
                         origem_id,
-                        origens (nome),
                         valor_faturado,
                         qtd_viagens,
                         qtd_quilometros,
                         qtd_horas,
-                        criado_em
+                        criado_em,
+                        origens!entradas_origem_id_fkey(nome)
                     `)
                     .order('data', { ascending: false });
                 if (error) {
@@ -158,7 +158,7 @@
                         tr.innerHTML = `
                             <td>${formatDate(entrada.data)}</td>
                             <td>${entrada.dia_semana}</td>
-                            <td>${entrada.origens.nome}</td>
+                            <td>${entrada.origens ? entrada.origens.nome : 'N/A'}</td>
                             <td>${entrada.valor_faturado.toFixed(2)}</td>
                             <td>${entrada.qtd_viagens}</td>
                             <td>${entrada.qtd_quilometros.toFixed(2)}</td>
